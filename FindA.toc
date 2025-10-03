@@ -1,0 +1,12 @@
+## Interface: 30300
+## Title: FindA
+## Notes: |cffff00f3Simple tool for finding & marking targets.|r
+## Author: Matt Kaufman
+## SavedVariables: FindASV
+## Version: 2.0.0
+
+namespace.lua
+constants.lua
+helpers.lua
+options.lua
+main.lua
