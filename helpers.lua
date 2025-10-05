@@ -21,3 +21,11 @@ FindA.Helpers.CreateFontString = function(frame, text, x, y, draw_layer, templat
     font_string:SetText(text)
     return font_string
 end
+
+FindA.Helpers.PrintHelpMessage = function()
+    print(FindA.Constants.help_message)
+end
+
+FindA.Helpers.PrintLoginMessage = function()
+    print(FindA.Constants.login_message)
+end

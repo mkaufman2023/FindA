@@ -10,3 +10,4 @@ FindA = {}
 FindA.Constants = {}
 FindA.Helpers = {}
 FindA.Options = {}
+FindA.Frames = {}
