@@ -110,9 +110,24 @@ FindA.MacroButton.current_text:SetPoint("CENTER", -40, 10)
 FindA.MacroButton.UpdateText = function(text)
     FindA.MacroButton.current_text:SetText("Find:  \n" .. text)
 end
-
 FindA.MacroButton.UpdateAttribute = function(text)
-    FindA.MacroButton:SetAttribute("macrotext1", "/target " .. text .. "\n/run FindA.find(" .. '"' .. text .. '"' .. ");")
+    local targets = type(text) == "table" and text or FindA.Helpers.SplitTargets(text)
+    if #targets == 0 then
+        FindA.MacroButton:SetAttribute("macrotext1", "/run print('FindA: no target(s) set')")
+        return
+    end
+    -- First /target runs unconditionally; the rest only runs if a target wasn't found yet.
+    local macro_lines = {}
+    for i, name in ipairs(targets) do
+        if i == 1 then
+            table.insert(macro_lines, "/target " .. name)
+        else
+            -- fall through if nothing found *or* current target is dead
+            table.insert(macro_lines, "/target [noexists][dead] " .. name)
+        end
+    end
+    table.insert(macro_lines, '/run FindA.find("' .. table.concat(targets, ",") .. '")')
+    FindA.MacroButton:SetAttribute("macrotext1", table.concat(macro_lines, "\n"))
 end
 
 
@@ -127,6 +142,7 @@ FindA.Frames.reload:SetScript("OnEvent", function(self, event, ...)
         FindA.MacroButton.UpdateAttribute(FindASV.last_found)
     end
 end)
+
 
 -- Combat lockdown pending update logic
 FindA.Frames.reload = CreateFrame("Frame")
@@ -152,15 +168,20 @@ end)
 FindA.Options.InitInterfaceOptions()
 
 
--- Main finding function
-FindA.find = function(thing)
+-- Main finding function (multi-target version)
+FindA.find = function(things)
+    local wanted = FindA.Helpers.SplitTargets(things)
+    if #wanted == 0 then return end
+
     local target = UnitName("target")
-    if target then
-        thing = FindA.Helpers.CapitalizeString(thing)
-        if string.find(string.lower(target), string.lower(thing)) then
-            local dead = UnitIsDead("target")
+    if not target then return end
+
+    for _, name in ipairs(wanted) do
+        if string.find(string.lower(target), string.lower(name), 1, true) then
+            local dead   = UnitIsDead("target")
             local tapped = UnitIsTapDenied("target")
             local marked = GetRaidTargetIndex("target")
+
             if not dead and not tapped and not marked then
                 SetRaidTarget("target", FindA.marker)
             end
@@ -170,6 +191,7 @@ FindA.find = function(thing)
             if dead and marked then
                 SetRaidTarget("target", 0)
             end
+            break
         end
     end
 end
@@ -179,7 +201,12 @@ end
 local function HandleGlobalActions(text)
     FindA.button_text_set_to = text
     if FindA.chat_msg_enable == 1 then
-        print("|cff00ff00Finding target:|r  " .. text)
+        -- Check if there is a comma in the text to indicate multiple targets
+        if string.find(text, ",") then
+            print("|cff00ff00Finding targets:|r  " .. text)
+        else
+            print("|cff00ff00Finding target:|r  " .. text)
+        end
     end
     if FindA.remember_finding == 1 then
         FindASV.last_found = text
@@ -221,15 +248,18 @@ local function SlashFinda(input)
         FindA.Helpers.PrintHelpMessage()
         return
     end
-    if FindA.button_text_set_to ~= FindA.Helpers.CapitalizeString(input) then
-        input = FindA.Helpers.CapitalizeString(input)
-        FindA.MacroButton.UpdateText(input)
-        FindA.MacroButton.UpdateAttribute(input)
-        HandleGlobalActions(input)
+
+    local names = FindA.Helpers.SplitTargets(input)
+    if #names == 0 then return end
+    local display = table.concat(names, ",")
+    if FindA.button_text_set_to ~= display then
+        FindA.MacroButton.UpdateText(display)
+        FindA.MacroButton.UpdateAttribute(names)
+        HandleGlobalActions(display)
         return
     else
         if FindA.chat_msg_enable == 1 then
-            print("|cff00ff00Finda:|r  Target already set to " .. FindA.Helpers.CapitalizeString(input) .. ".")
+            print("|cff00ff00Finda:|r  Target already set to " .. display .. ".")
         end
         return
     end

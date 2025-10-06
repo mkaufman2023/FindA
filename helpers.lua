@@ -29,3 +29,15 @@ end
 FindA.Helpers.PrintLoginMessage = function()
     print(FindA.Constants.login_message)
 end
+
+FindA.Helpers.SplitTargets = function(input)
+    local out = {}
+    if not input or input == "" then return out end
+    for part in string.gmatch(input, "([^,]+)") do
+        part = part:gsub("^%s+", ""):gsub("%s+$", "")
+        if part ~= "" then
+            table.insert(out, FindA.Helpers.CapitalizeString(part))
+        end
+    end
+    return out
+end
