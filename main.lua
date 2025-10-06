@@ -13,6 +13,7 @@ FindA.chat_msg_enable = 1
 FindA.remember_finding = 1
 FindA.macro_button_text = ""
 FindA.button_text_set_to = ""
+FindA.pending_target_update = nil
 FindA.MacroButton = CreateFrame("Button", "FindAButton", UIParent, "SecureActionButtonTemplate")
 
 
@@ -119,14 +120,30 @@ end
 FindA.Frames.reload = CreateFrame("Frame")
 FindA.Frames.reload:RegisterEvent("PLAYER_ENTERING_WORLD")
 FindA.Frames.reload:SetScript("OnEvent", function(self, event, ...)
-    for k,v in pairs(({...})) do
-        print(k,v)
-    end
     if FindA.always_hide == 1 then
         FindA.MacroButton:Hide()
     end
     if FindA.remember_finding == 1 and FindASV.last_found then
         FindA.MacroButton.UpdateAttribute(FindASV.last_found)
+    end
+end)
+
+-- Combat lockdown pending update logic
+FindA.Frames.reload = CreateFrame("Frame")
+FindA.Frames.reload:RegisterEvent("PLAYER_REGEN_ENABLED")
+FindA.Frames.reload:SetScript("OnEvent", function(self, event, ...)
+    if FindA.pending_target_update then
+        FindA.pending_target_update = FindA.Helpers.CapitalizeString(FindA.pending_target_update)
+        FindA.MacroButton.UpdateText(FindA.pending_target_update)
+        FindA.MacroButton.UpdateAttribute(FindA.pending_target_update)
+        FindA.button_text_set_to = FindA.pending_target_update
+        if FindA.chat_msg_enable == 1 then
+            print("|cff00ff00Finding target:|r  " .. FindA.pending_target_update)
+        end
+        if FindA.remember_finding == 1 then
+            FindASV.last_found = FindA.pending_target_update
+        end
+        FindA.pending_target_update = nil
     end
 end)
 
@@ -220,7 +237,8 @@ end
 
 SlashCmdList["FA"] = function(input)
     if InCombatLockdown() then
-        print("|cff00ff00Finda:|r  Failed due to combat. Try again when out of combat.")
+        FindA.pending_target_update = input
+        print("|cff00ff00Finda:|r  Target will update after leaving combat.")
         return
     end
     SlashFinda(input)
@@ -228,7 +246,8 @@ end
 
 SlashCmdList["FINDA"] = function(input)
     if InCombatLockdown() then
-        print("|cff00ff00Finda:|r  Failed due to combat. Try again when out of combat.")
+        FindA.pending_target_update = input
+        print("|cff00ff00Finda:|r  Target will update after leaving combat.")
         return
     end
     SlashFinda(input)
